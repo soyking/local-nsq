@@ -7,6 +7,7 @@ import (
 
 func TestLocalNSQ(t *testing.T) {
 	l := NewLocalNSQ()
+	defer l.Close()
 	l.Subscribe("test", printCallback)
 	l.Dispatch("test", 1)
 	time.Sleep(1 * time.Second)

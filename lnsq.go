@@ -1,7 +1,6 @@
 package lnsq
 
 import (
-	"log"
 	"sync"
 )
 
@@ -39,18 +38,18 @@ func NewLocalNSQ(size ...int) *LocalNSQ {
 func (l *LocalNSQ) receive() {
 	for e := range l.eventCh {
 		topic := e.Topic
-		callbacks := l.callbacks[topic]
-		for i := range callbacks {
-			err := callbacks[i](e.Content)
-			if err != nil {
-				log.Println(err)
-			}
-		}
+		go dispatchTopic(l.callbacks[topic], e.Content)
 	}
 }
 
-func (l *LocalNSQ) Dispatch(topic string, event interface{}) {
-	l.eventCh <- &Event{Topic: topic, Content: event}
+func dispatchTopic(callbacks []Callback, content interface{}) {
+	for i := range callbacks {
+		callbacks[i](content)
+	}
+}
+
+func (l *LocalNSQ) Dispatch(topic string, content interface{}) {
+	l.eventCh <- &Event{Topic: topic, Content: content}
 }
 
 func (l *LocalNSQ) Subscribe(topic string, c Callback) {
@@ -59,5 +58,9 @@ func (l *LocalNSQ) Subscribe(topic string, c Callback) {
 	if l.callbacks[topic] == nil {
 		l.callbacks[topic] = []Callback{}
 	}
-	l.callbacks[topic] = append(l.callbacks[topic],c )
+	l.callbacks[topic] = append(l.callbacks[topic], c)
+}
+
+func (l *LocalNSQ) Close() {
+	close(l.eventCh)
 }
