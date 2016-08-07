@@ -5,8 +5,8 @@ import (
 )
 
 type Channel struct {
-	Name       string
-	Stat       *CountStat
+	Name string
+	Stat *CountStat
 
 	topicsLock sync.RWMutex
 	topics     map[string]*Topic
