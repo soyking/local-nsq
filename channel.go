@@ -6,12 +6,14 @@ type channel struct {
 	name       string
 	topicsLock sync.RWMutex
 	topics     map[string]*topic
+	stats      *CountStats
 }
 
-func newChannel(name string) *channel {
+func newChannel(name string, stats *CountStats) *channel {
 	return &channel{
 		name:   name,
 		topics: make(map[string]*topic),
+		stats:  stats,
 	}
 }
 
@@ -21,7 +23,7 @@ func (c *channel) subscribe(topic string, callback Callback, maxInFlight int, co
 
 	t, ok := c.topics[topic]
 	if !ok {
-		t = newTopic(topic, maxInFlight)
+		t = newTopic(topic, maxInFlight, c.stats.NewSubStats(topic))
 		c.topics[topic] = t
 	}
 
@@ -33,6 +35,7 @@ func (c *channel) dispatch(msg interface{}) {
 	c.topicsLock.RLock()
 	defer c.topicsLock.RUnlock()
 
+	c.stats.Count()
 	for _, topic := range c.topics {
 		topic.dispatch(msg)
 	}

@@ -12,10 +12,14 @@ var (
 type LocalNSQ struct {
 	channelsLock sync.RWMutex
 	channels     map[string]*channel
+	stats        *CountStats
 }
 
 func NewLocalNSQ() *LocalNSQ {
-	return &LocalNSQ{channels: make(map[string]*channel)}
+	return &LocalNSQ{
+		channels: make(map[string]*channel),
+		stats:    NewStats(),
+	}
 }
 
 func (l *LocalNSQ) Subscribe(channel, topic string, callback Callback, maxInFlight, concurrency int) {
@@ -29,7 +33,7 @@ func (l *LocalNSQ) getChannel(channel string) *channel {
 
 	c, ok := l.channels[channel]
 	if !ok {
-		c = newChannel(channel)
+		c = newChannel(channel, l.stats.NewSubStats(channel))
 		l.channels[channel] = c
 	}
 
