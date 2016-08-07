@@ -1,19 +1,22 @@
 package lnsq
 
-import "sync"
+import (
+	"sync"
+)
 
 type Channel struct {
 	Name       string
+	Stat       *CountStat
+
 	topicsLock sync.RWMutex
 	topics     map[string]*Topic
-	Stats      *CountStats
 }
 
-func NewChannel(name string, stats *CountStats) *Channel {
+func NewChannel(name string) *Channel {
 	return &Channel{
 		Name:   name,
 		topics: make(map[string]*Topic),
-		Stats:  stats,
+		Stat:   NewCountStat(),
 	}
 }
 
@@ -23,7 +26,7 @@ func (c *Channel) Subscribe(topic string, callback Callback, maxInFlight int, co
 
 	t, ok := c.topics[topic]
 	if !ok {
-		t = NewTopic(topic, maxInFlight, c.Stats.NewSubStats(topic))
+		t = NewTopic(topic, maxInFlight)
 		c.topics[topic] = t
 	}
 
@@ -35,19 +38,19 @@ func (c *Channel) Dispatch(msg interface{}) {
 	c.topicsLock.RLock()
 	defer c.topicsLock.RUnlock()
 
-	c.Stats.IncrCount()
+	c.Stat.IncrCount()
 	for _, topic := range c.topics {
 		topic.Dispatch(msg)
 	}
 }
 
 func (c *Channel) TopicsStats() map[string]int64 {
-	c.Stats.RLock()
-	defer c.Stats.RUnlock()
+	c.topicsLock.RLock()
+	defer c.topicsLock.RUnlock()
 
 	topicsStats := make(map[string]int64)
-	for topic, stats := range c.Stats.SubStats {
-		topicsStats[topic] = stats.Count
+	for name, topic := range c.topics {
+		topicsStats[name] = topic.Stat.Count()
 	}
 	return topicsStats
 }

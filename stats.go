@@ -1,34 +1,21 @@
 package lnsq
 
 import (
-	"sync"
 	"sync/atomic"
 )
 
-type CountStats struct {
-	sync.RWMutex
-	Count    int64
-	SubStats map[string]*CountStats
+type CountStat struct {
+	count int64
 }
 
-func NewStats() *CountStats {
-	return &CountStats{
-		SubStats: make(map[string]*CountStats),
-	}
+func NewCountStat() *CountStat {
+	return &CountStat{}
 }
 
-func (s *CountStats) IncrCount() {
-	atomic.AddInt64(&s.Count, 1)
+func (s *CountStat) IncrCount() {
+	atomic.AddInt64(&s.count, 1)
 }
 
-func (s *CountStats) NewSubStats(name string) *CountStats {
-	s.Lock()
-	defer s.Unlock()
-
-	if name == "" {
-		name = randStatID()
-	}
-	countStats := NewStats()
-	s.SubStats[name] = countStats
-	return countStats
+func (s *CountStat) Count() int64 {
+	return atomic.LoadInt64(&s.count)
 }

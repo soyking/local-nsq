@@ -1,44 +1,56 @@
 package lnsq
 
-type Callback func(interface{})
+import (
+	"sync"
+)
 
 type Topic struct {
-	Name  string
-	ch    chan interface{}
-	Stats *CountStats
+	Name string
+	Stat *CountStat
+	ch   chan interface{}
+
+	callbacksLock sync.RWMutex
+	callbacks     map[string]*CallbackWrapper
 }
 
-func NewTopic(name string, maxInFlight int, stats *CountStats) *Topic {
+func NewTopic(name string, maxInFlight int) *Topic {
 	return &Topic{
-		Name:  name,
-		ch:    make(chan interface{}, maxInFlight),
-		Stats: stats,
+		Name:      name,
+		Stat:      NewCountStat(),
+		ch:        make(chan interface{}, maxInFlight),
+		callbacks: make(map[string]*CallbackWrapper),
 	}
 }
 
 func (t *Topic) Subscribe(c Callback, concurrency int) {
+	t.callbacksLock.Lock()
+	defer t.callbacksLock.Unlock()
+
 	for i := 0; i < concurrency; i++ {
-		go t.Callback(c)
+		cw := NewCallbackWrapper(c)
+		t.callbacks[randStatID()] = cw
+		go t.callback(cw)
 	}
 }
 
-func (t *Topic) Callback(c Callback) {
-	callbackStats := t.Stats.NewSubStats("")
+func (t *Topic) callback(c *CallbackWrapper) {
 	for msg := range t.ch {
-		c(msg)
-		callbackStats.IncrCount()
+		c.Handler(msg)
 	}
 }
 
 func (t *Topic) Dispatch(msg interface{}) {
-	t.Stats.IncrCount()
+	t.Stat.IncrCount()
 	t.ch <- msg
 }
 
 func (t *Topic) CallbacksStats() map[string]int64 {
+	t.callbacksLock.RLock()
+	defer t.callbacksLock.RUnlock()
+
 	callbacksStats := make(map[string]int64)
-	for topic, stats := range t.Stats.SubStats {
-		callbacksStats[topic] = stats.Count
+	for name, callback := range t.callbacks {
+		callbacksStats[name] = callback.Stat.Count()
 	}
 	return callbacksStats
 }
