@@ -20,7 +20,7 @@ func NewChannel(name string) *Channel {
 	}
 }
 
-func (c *Channel) Subscribe(topic string, callback Callback, maxInFlight int, concurrency int) *Topic {
+func (c *Channel) Subscribe(topic string, callback Callback, maxInFlight int, concurrency int) {
 	c.topicsLock.Lock()
 	defer c.topicsLock.Unlock()
 
@@ -31,7 +31,6 @@ func (c *Channel) Subscribe(topic string, callback Callback, maxInFlight int, co
 	}
 
 	t.Subscribe(callback, concurrency)
-	return t
 }
 
 func (c *Channel) Dispatch(msg interface{}) {
