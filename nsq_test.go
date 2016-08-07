@@ -2,7 +2,6 @@ package lnsq
 
 import (
 	"fmt"
-	"strconv"
 	"sync"
 	"testing"
 )
@@ -58,8 +57,8 @@ func BenchmarkLocalNSQ_Dispatch_DifferentChannel(b *testing.B) {
 	l := NewLocalNSQ()
 	var wg sync.WaitGroup
 	wg.Add(2 * b.N)
-	l.Subscribe("channel1", "topic", intCallbackWrap(&wg, "callback1"), 1, 1)
-	l.Subscribe("channel2", "topic", intCallbackWrap(&wg, "callback2"), 1, 1)
+	l.Subscribe("channel1", "topic", intCallbackWrap(&wg, "callback1"), 1, 2)
+	l.Subscribe("channel2", "topic", intCallbackWrap(&wg, "callback2"), 1, 2)
 
 	b.StartTimer()
 	b.RunParallel(func(pb *testing.PB) {
@@ -70,6 +69,9 @@ func BenchmarkLocalNSQ_Dispatch_DifferentChannel(b *testing.B) {
 	})
 
 	wg.Wait()
+	b.Logf("%#v\n", l.ChannelsStats())
+	b.Logf("%#v\n", l.TopicsStats("channel1"))
+	b.Logf("%#v\n", l.CallbacksStats("channel1","topic"))
 }
 
 func BenchmarkLocalNSQ_Dispatch_DifferentTopic(b *testing.B) {
@@ -77,8 +79,8 @@ func BenchmarkLocalNSQ_Dispatch_DifferentTopic(b *testing.B) {
 	l := NewLocalNSQ()
 	var wg sync.WaitGroup
 	wg.Add(2 * b.N)
-	l.Subscribe("channel", "topic1", intCallbackWrap(&wg, "callback1"), 1, 1)
-	l.Subscribe("channel", "topic2", intCallbackWrap(&wg, "callback2"), 1, 1)
+	l.Subscribe("channel", "topic1", intCallbackWrap(&wg, "callback1"), 1, 3)
+	l.Subscribe("channel", "topic2", intCallbackWrap(&wg, "callback2"), 1, 3)
 
 	b.StartTimer()
 	b.RunParallel(func(pb *testing.PB) {
@@ -88,4 +90,8 @@ func BenchmarkLocalNSQ_Dispatch_DifferentTopic(b *testing.B) {
 	})
 
 	wg.Wait()
+	b.Logf("%#v\n", l.ChannelsStats())
+	b.Logf("%#v\n", l.TopicsStats("channel"))
+	b.Logf("%#v\n", l.CallbacksStats("channel", "topic1"))
+	b.Logf("%#v\n", l.CallbacksStats("channel", "topic2"))
 }

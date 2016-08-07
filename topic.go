@@ -2,34 +2,43 @@ package lnsq
 
 type Callback func(interface{})
 
-type topic struct {
-	name  string
+type Topic struct {
+	Name  string
 	ch    chan interface{}
-	stats *CountStats
+	Stats *CountStats
 }
 
-func newTopic(name string, maxInFlight int, stats *CountStats) *topic {
-	return &topic{
-		name:  name,
+func NewTopic(name string, maxInFlight int, stats *CountStats) *Topic {
+	return &Topic{
+		Name:  name,
 		ch:    make(chan interface{}, maxInFlight),
-		stats: stats,
+		Stats: stats,
 	}
 }
 
-func (t *topic) subscribe(c Callback, concurrency int) {
+func (t *Topic) Subscribe(c Callback, concurrency int) {
 	for i := 0; i < concurrency; i++ {
-		go t.callback(c)
+		go t.Callback(c)
 	}
 }
 
-func (t *topic) callback(c Callback) {
-	subStats := t.stats.NewSubStats("")
+func (t *Topic) Callback(c Callback) {
+	callbackStats := t.Stats.NewSubStats("")
 	for msg := range t.ch {
 		c(msg)
-		subStats.Count()
+		callbackStats.IncrCount()
 	}
 }
 
-func (t *topic) dispatch(msg interface{}) {
+func (t *Topic) Dispatch(msg interface{}) {
+	t.Stats.IncrCount()
 	t.ch <- msg
+}
+
+func (t *Topic) CallbacksStats() map[string]int64 {
+	callbacksStats := make(map[string]int64)
+	for topic, stats := range t.Stats.SubStats {
+		callbacksStats[topic] = stats.Count
+	}
+	return callbacksStats
 }

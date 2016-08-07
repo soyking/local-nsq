@@ -7,18 +7,18 @@ import (
 
 type CountStats struct {
 	sync.RWMutex
-	count int64
-	stats map[string]*CountStats
+	Count    int64
+	SubStats map[string]*CountStats
 }
 
 func NewStats() *CountStats {
 	return &CountStats{
-		stats: make(map[string]*CountStats),
+		SubStats: make(map[string]*CountStats),
 	}
 }
 
-func (s *CountStats) Count() {
-	atomic.AddInt64(&s.count, 1)
+func (s *CountStats) IncrCount() {
+	atomic.AddInt64(&s.Count, 1)
 }
 
 func (s *CountStats) NewSubStats(name string) *CountStats {
@@ -29,6 +29,6 @@ func (s *CountStats) NewSubStats(name string) *CountStats {
 		name = randStatID()
 	}
 	countStats := NewStats()
-	s.stats[name] = countStats
+	s.SubStats[name] = countStats
 	return countStats
 }
